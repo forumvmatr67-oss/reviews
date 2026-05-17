@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>⭐ Отзывы | Модератор: gosha</title>
+  <title>⭐ Отзывы | Модерация</title>
   <style>
     * {
       margin: 0;
@@ -209,7 +209,7 @@
     <h2>⭐ Одобренные отзывы</h2>
     <div id="reviewsList"></div>
   </div>
-  <footer>👑 Модератор: gosha</footer>
+  <footer>✍️ Регистрируйтесь, оставляйте отзывы — они проходят модерацию</footer>
 </div>
 
 <script>
@@ -218,17 +218,15 @@
   let reviews = [];
   let currentUser = null;
 
-  // Инициализация: создаём модератора gosha с паролем 79032270684
+  // Инициализация: создаём модератора gosha с паролем 79032270684 (без подсказок в UI)
   function initData() {
     const storedUsers = localStorage.getItem("review_system_users");
     if (storedUsers) {
       users = JSON.parse(storedUsers);
-      // убедимся, что gosha с нужным паролем существует
       const goshaExists = users.find(u => u.username === "gosha");
       if (!goshaExists) {
         users.push({ id: "mod_gosha", username: "gosha", password: "79032270684", isAdmin: true });
       } else {
-        // обновим пароль на случай, если в старых данных другой
         goshaExists.password = "79032270684";
         goshaExists.isAdmin = true;
       }
@@ -282,8 +280,7 @@
   function registerUser(username, password) {
     if (!username.trim() || !password.trim()) return "Логин и пароль не могут быть пустыми";
     if (users.find(u => u.username === username)) return "Пользователь уже существует";
-    // защитим модераторское имя
-    if (username === "gosha") return "Имя gosha зарезервировано для модератора";
+    if (username === "gosha") return "Имя пользователя занято";
     const newUser = {
       id: "user_" + Date.now() + "_" + Math.floor(Math.random() * 10000),
       username: username.trim(),
@@ -377,7 +374,6 @@
             <input type="password" id="loginPassword" placeholder="Пароль">
             <div id="loginError" class="error-msg"></div>
             <button id="loginBtn">Войти</button>
-            <p style="font-size:0.8rem; margin-top:12px; color:#475569;">👑 Модератор: gosha / 79032270684</p>
           </div>
         </div>
       `;
@@ -404,7 +400,7 @@
     } else {
       authDiv.style.display = "none";
       loggedDiv.style.display = "block";
-      document.getElementById("welcomeUser").innerHTML = `👋 Привет, <strong>${escapeHtml(currentUser.username)}</strong> ${currentUser.isAdmin ? '👑 (Модератор gosha)' : ''}`;
+      document.getElementById("welcomeUser").innerHTML = `👋 Привет, <strong>${escapeHtml(currentUser.username)}</strong> ${currentUser.isAdmin ? '👑 (модератор)' : ''}`;
       document.getElementById("logoutBtn").onclick = () => logout();
     }
   }
@@ -413,7 +409,6 @@
   function renderReviewForm() {
     const container = document.getElementById("reviewFormContainer");
     if (!currentUser) return;
-    // модератор тоже может писать отзывы? да, пусть может, но они тоже идут на модерацию (кроме самого модератора? оставим логику: любой пишет → на проверку)
     container.innerHTML = `
       <h2>✍️ Написать отзыв</h2>
       <textarea id="reviewText" rows="3" placeholder="Поделитесь впечатлениями..."></textarea>
@@ -421,7 +416,7 @@
       <div class="stars-input" id="starRatingWidget"></div>
       <div id="reviewFormError" class="error-msg"></div>
       <button id="submitReviewBtn">📨 Отправить на модерацию</button>
-      <p style="font-size:0.75rem; color:#6c757d; margin-top: 0.5rem;">⭐ Отзыв появится после одобрения модератором (gosha).</p>
+      <p style="font-size:0.75rem; color:#6c757d; margin-top: 0.5rem;">⭐ Отзыв появится после одобрения модератором.</p>
     `;
     const starsContainer = document.getElementById("starRatingWidget");
     currentRatingValue = 0;
@@ -457,7 +452,7 @@
         renderAll();
         const successDiv = document.createElement("div");
         successDiv.className = "success-msg";
-        successDiv.innerText = "✅ Отзыв отправлен модератору gosha!";
+        successDiv.innerText = "✅ Отзыв отправлен на модерацию!";
         errDiv.parentNode?.appendChild(successDiv);
         setTimeout(() => successDiv.remove(), 2500);
       }
@@ -475,7 +470,7 @@
     const pendingReviews = reviews.filter(r => r.status === "pending").sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
     if (pendingReviews.length === 0) {
       adminContainer.innerHTML = `
-        <h2>🛡️ Панель модератора (gosha)</h2>
+        <h2>🛡️ Панель модератора</h2>
         <div style="background:#f1f5f9; padding:1rem; border-radius: 20px;">✅ Нет отзывов на проверку.</div>
       `;
       return;
