@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>⭐ Отзывы | Модератор: gosha</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: system-ui, 'Segoe UI', 'Roboto', sans-serif;
+    }
+
+    body {
+      background: #f1f5f9;
+      padding: 2rem 1rem;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+
+    .card {
+      background: white;
+      border-radius: 24px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+      padding: 1.5rem;
+    }
+
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 1.2rem;
+      color: #0f172a;
+      border-left: 5px solid #f59e0b;
+      padding-left: 1rem;
+    }
+
+    h3 {
+      font-size: 1.2rem;
+      font-weight: 500;
+      margin: 1rem 0 0.8rem 0;
+      color: #1e293b;
+    }
+
+    button, .btn-like {
+      background: #3b82f6;
+      border: none;
+      color: white;
+      padding: 0.5rem 1.2rem;
+      border-radius: 40px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: 0.2s;
+      font-size: 0.9rem;
+    }
+
+    button:hover {
+      background: #2563eb;
+      transform: scale(0.97);
+    }
+
+    input, textarea, select {
+      width: 100%;
+      padding: 0.7rem 1rem;
+      margin: 0.5rem 0 1rem 0;
+      border: 1px solid #cbd5e1;
+      border-radius: 20px;
+      font-size: 0.95rem;
+      background: #fefefe;
+    }
+
+    textarea {
+      border-radius: 20px;
+      resize: vertical;
+    }
+
+    .flex-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .stars-input {
+      display: flex;
+      gap: 6px;
+      margin: 0.5rem 0 1rem 0;
+    }
+
+    .star {
+      font-size: 32px;
+      cursor: pointer;
+      transition: 0.1s;
+      color: #cbd5e1;
+      user-select: none;
+    }
+
+    .star.selected {
+      color: #fbbf24;
+      text-shadow: 0 0 2px #b45309;
+    }
+
+    .star-readonly {
+      font-size: 20px;
+      letter-spacing: 2px;
+      color: #fbbf24;
+    }
+    .star-readonly.gray {
+      color: #e2e8f0;
+    }
+
+    .review-item {
+      background: #f8fafc;
+      border-radius: 24px;
+      padding: 1rem 1.2rem;
+      margin-bottom: 1rem;
+      border: 1px solid #e2e8f0;
+    }
+
+    .review-header {
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+      color: #0f172a;
+    }
+
+    .review-text {
+      margin: 0.6rem 0;
+      color: #334155;
+      line-height: 1.4;
+    }
+
+    .admin-actions {
+      margin-top: 0.8rem;
+      display: flex;
+      gap: 12px;
+    }
+
+    .btn-approve {
+      background: #10b981;
+    }
+    .btn-approve:hover { background: #059669; }
+
+    .btn-reject {
+      background: #ef4444;
+    }
+    .btn-reject:hover { background: #dc2626; }
+
+    .badge-pending {
+      background: #fef3c7;
+      color: #b45309;
+      border-radius: 40px;
+      padding: 0.2rem 0.8rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .error-msg {
+      color: #dc2626;
+      font-size: 0.8rem;
+      margin-top: 0.2rem;
+    }
+
+    .success-msg {
+      color: #16a34a;
+    }
+
+    hr {
+      margin: 1rem 0;
+      border-color: #e2e8f0;
+    }
+
+    .logout-btn {
+      background: #64748b;
+    }
+    .logout-btn:hover { background: #475569; }
+
+    footer {
+      text-align: center;
+      font-size: 0.8rem;
+      color: #94a3b8;
+      margin-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div id="authSection" class="card"></div>
+  
+  <div id="loggedInArea" style="display: none;">
+    <div class="flex-row" style="margin-bottom: 0.5rem;">
+      <span id="welcomeUser" style="font-weight: 500;"></span>
+      <button id="logoutBtn" class="logout-btn">🚪 Выйти</button>
+    </div>
+    <div id="reviewFormContainer" class="card"></div>
+    <div id="adminPanelContainer" class="card"></div>
+  </div>
+  
+  <div id="publicReviewsContainer" class="card">
+    <h2>⭐ Одобренные отзывы</h2>
+    <div id="reviewsList"></div>
+  </div>
+  <footer>👑 Модератор: gosha</footer>
+</div>
+
+<script>
+  // ---------- Хранилище ----------
+  let users = [];
+  let reviews = [];
+  let currentUser = null;
+
+  // Инициализация: создаём модератора gosha с паролем 79032270684
+  function initData() {
+    const storedUsers = localStorage.getItem("review_system_users");
+    if (storedUsers) {
+      users = JSON.parse(storedUsers);
+      // убедимся, что gosha с нужным паролем существует
+      const goshaExists = users.find(u => u.username === "gosha");
+      if (!goshaExists) {
+        users.push({ id: "mod_gosha", username: "gosha", password: "79032270684", isAdmin: true });
+      } else {
+        // обновим пароль на случай, если в старых данных другой
+        goshaExists.password = "79032270684";
+        goshaExists.isAdmin = true;
+      }
+    } else {
+      users = [
+        { id: "mod_gosha", username: "gosha", password: "79032270684", isAdmin: true }
+      ];
+    }
+    saveUsers();
+
+    const storedReviews = localStorage.getItem("review_system_reviews");
+    if (storedReviews) {
+      reviews = JSON.parse(storedReviews);
+    } else {
+      reviews = [];
+    }
+    saveReviews();
+  }
+
+  function saveUsers() {
+    localStorage.setItem("review_system_users", JSON.stringify(users));
+  }
+
+  function saveReviews() {
+    localStorage.setItem("review_system_reviews", JSON.stringify(reviews));
+  }
+
+  function loadSession() {
+    const session = localStorage.getItem("review_system_currentUser");
+    if (session) {
+      try {
+        currentUser = JSON.parse(session);
+        const exists = users.find(u => u.id === currentUser.id);
+        if (!exists) currentUser = null;
+        else if (exists.username !== currentUser.username) currentUser = exists;
+      } catch(e) { currentUser = null; }
+    } else {
+      currentUser = null;
+    }
+  }
+
+  function saveSession() {
+    if (currentUser) {
+      localStorage.setItem("review_system_currentUser", JSON.stringify(currentUser));
+    } else {
+      localStorage.removeItem("review_system_currentUser");
+    }
+  }
+
+  // Регистрация обычного пользователя
+  function registerUser(username, password) {
+    if (!username.trim() || !password.trim()) return "Логин и пароль не могут быть пустыми";
+    if (users.find(u => u.username === username)) return "Пользователь уже существует";
+    // защитим модераторское имя
+    if (username === "gosha") return "Имя gosha зарезервировано для модератора";
+    const newUser = {
+      id: "user_" + Date.now() + "_" + Math.floor(Math.random() * 10000),
+      username: username.trim(),
+      password: password,
+      isAdmin: false
+    };
+    users.push(newUser);
+    saveUsers();
+    currentUser = { id: newUser.id, username: newUser.username, isAdmin: false };
+    saveSession();
+    return null;
+  }
+
+  function loginUser(username, password) {
+    const found = users.find(u => u.username === username && u.password === password);
+    if (!found) return "Неверный логин или пароль";
+    currentUser = { id: found.id, username: found.username, isAdmin: found.isAdmin || false };
+    saveSession();
+    return null;
+  }
+
+  function logout() {
+    currentUser = null;
+    localStorage.removeItem("review_system_currentUser");
+    renderAll();
+  }
+
+  // Добавление отзыва (только для залогиненных, статус pending)
+  function addReview(text, rating) {
+    if (!currentUser) return "Необходимо войти";
+    if (!text.trim()) return "Текст отзыва не может быть пустым";
+    if (!rating || rating < 1 || rating > 5) return "Поставьте оценку от 1 до 5 звёзд";
+    
+    const newReview = {
+      id: "rev_" + Date.now() + "_" + Math.random().toString(36).substr(2, 6),
+      userId: currentUser.id,
+      username: currentUser.username,
+      text: text.trim(),
+      rating: parseInt(rating),
+      status: "pending",
+      createdAt: new Date().toISOString()
+    };
+    reviews.push(newReview);
+    saveReviews();
+    return null;
+  }
+
+  // Модерация (только для админа)
+  function moderateReview(reviewId, action) {
+    const review = reviews.find(r => r.id === reviewId);
+    if (!review) return;
+    if (action === "approve") review.status = "approved";
+    if (action === "reject") review.status = "rejected";
+    saveReviews();
+    renderAll();
+  }
+
+  // ---------- UI ----------
+  function renderAll() {
+    loadSession();
+    renderAuthAndMain();
+    renderPublicReviews();
+    if (currentUser) {
+      renderReviewForm();
+      renderAdminPanel();
+    } else {
+      document.getElementById("loggedInArea").style.display = "none";
+    }
+  }
+
+  function renderAuthAndMain() {
+    const authDiv = document.getElementById("authSection");
+    const loggedDiv = document.getElementById("loggedInArea");
+    
+    if (!currentUser) {
+      loggedDiv.style.display = "none";
+      authDiv.style.display = "block";
+      authDiv.innerHTML = `
+        <h2>🔐 Добро пожаловать</h2>
+        <div style="display: flex; flex-wrap: wrap; gap: 2rem;">
+          <div style="flex:1; min-width: 200px;">
+            <h3>📝 Регистрация</h3>
+            <input type="text" id="regUsername" placeholder="Имя пользователя" autocomplete="off">
+            <input type="password" id="regPassword" placeholder="Пароль">
+            <div id="regError" class="error-msg"></div>
+            <button id="registerBtn">Создать аккаунт</button>
+          </div>
+          <div style="flex:1; min-width: 200px;">
+            <h3>🔑 Вход</h3>
+            <input type="text" id="loginUsername" placeholder="Логин">
+            <input type="password" id="loginPassword" placeholder="Пароль">
+            <div id="loginError" class="error-msg"></div>
+            <button id="loginBtn">Войти</button>
+            <p style="font-size:0.8rem; margin-top:12px; color:#475569;">👑 Модератор: gosha / 79032270684</p>
+          </div>
+        </div>
+      `;
+      document.getElementById("registerBtn")?.addEventListener("click", () => {
+        const uname = document.getElementById("regUsername").value;
+        const pwd = document.getElementById("regPassword").value;
+        const err = registerUser(uname, pwd);
+        if (err) {
+          document.getElementById("regError").innerText = err;
+        } else {
+          renderAll();
+        }
+      });
+      document.getElementById("loginBtn")?.addEventListener("click", () => {
+        const uname = document.getElementById("loginUsername").value;
+        const pwd = document.getElementById("loginPassword").value;
+        const err = loginUser(uname, pwd);
+        if (err) {
+          document.getElementById("loginError").innerText = err;
+        } else {
+          renderAll();
+        }
+      });
+    } else {
+      authDiv.style.display = "none";
+      loggedDiv.style.display = "block";
+      document.getElementById("welcomeUser").innerHTML = `👋 Привет, <strong>${escapeHtml(currentUser.username)}</strong> ${currentUser.isAdmin ? '👑 (Модератор gosha)' : ''}`;
+      document.getElementById("logoutBtn").onclick = () => logout();
+    }
+  }
+
+  let currentRatingValue = 0;
+  function renderReviewForm() {
+    const container = document.getElementById("reviewFormContainer");
+    if (!currentUser) return;
+    // модератор тоже может писать отзывы? да, пусть может, но они тоже идут на модерацию (кроме самого модератора? оставим логику: любой пишет → на проверку)
+    container.innerHTML = `
+      <h2>✍️ Написать отзыв</h2>
+      <textarea id="reviewText" rows="3" placeholder="Поделитесь впечатлениями..."></textarea>
+      <div style="margin: 0.5rem 0 0.2rem 0;">Ваша оценка:</div>
+      <div class="stars-input" id="starRatingWidget"></div>
+      <div id="reviewFormError" class="error-msg"></div>
+      <button id="submitReviewBtn">📨 Отправить на модерацию</button>
+      <p style="font-size:0.75rem; color:#6c757d; margin-top: 0.5rem;">⭐ Отзыв появится после одобрения модератором (gosha).</p>
+    `;
+    const starsContainer = document.getElementById("starRatingWidget");
+    currentRatingValue = 0;
+    function buildStars(ratingValue) {
+      starsContainer.innerHTML = "";
+      for (let i = 1; i <= 5; i++) {
+        const starSpan = document.createElement("span");
+        starSpan.classList.add("star");
+        starSpan.textContent = "★";
+        if (i <= ratingValue) starSpan.classList.add("selected");
+        starSpan.dataset.value = i;
+        starSpan.addEventListener("click", (e) => {
+          currentRatingValue = i;
+          buildStars(currentRatingValue);
+        });
+        starsContainer.appendChild(starSpan);
+      }
+    }
+    buildStars(0);
+    
+    document.getElementById("submitReviewBtn").addEventListener("click", () => {
+      const text = document.getElementById("reviewText").value;
+      const rating = currentRatingValue;
+      const errorMsg = addReview(text, rating);
+      const errDiv = document.getElementById("reviewFormError");
+      if (errorMsg) {
+        errDiv.innerText = errorMsg;
+      } else {
+        errDiv.innerText = "";
+        document.getElementById("reviewText").value = "";
+        currentRatingValue = 0;
+        buildStars(0);
+        renderAll();
+        const successDiv = document.createElement("div");
+        successDiv.className = "success-msg";
+        successDiv.innerText = "✅ Отзыв отправлен модератору gosha!";
+        errDiv.parentNode?.appendChild(successDiv);
+        setTimeout(() => successDiv.remove(), 2500);
+      }
+    });
+  }
+
+  // Панель модератора (видна только gosha)
+  function renderAdminPanel() {
+    const adminContainer = document.getElementById("adminPanelContainer");
+    if (!currentUser || !currentUser.isAdmin) {
+      adminContainer.style.display = "none";
+      return;
+    }
+    adminContainer.style.display = "block";
+    const pendingReviews = reviews.filter(r => r.status === "pending").sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+    if (pendingReviews.length === 0) {
+      adminContainer.innerHTML = `
+        <h2>🛡️ Панель модератора (gosha)</h2>
+        <div style="background:#f1f5f9; padding:1rem; border-radius: 20px;">✅ Нет отзывов на проверку.</div>
+      `;
+      return;
+    }
+    
+    adminContainer.innerHTML = `
+      <h2>🛡️ Модерация (${pendingReviews.length} отзывов ожидают)</h2>
+      <div id="pendingList"></div>
+    `;
+    const pendingDiv = document.getElementById("pendingList");
+    pendingDiv.innerHTML = pendingReviews.map(rev => `
+      <div class="review-item" data-review-id="${rev.id}">
+        <div class="review-header">
+          <span><strong>${escapeHtml(rev.username)}</strong> <span class="badge-pending">на проверке</span></span>
+          <span>${formatDate(rev.createdAt)}</span>
+        </div>
+        <div>${renderStarsReadonly(rev.rating)}</div>
+        <div class="review-text">📝 ${escapeHtml(rev.text)}</div>
+        <div class="admin-actions">
+          <button class="btn-approve" data-id="${rev.id}" data-action="approve">✅ Одобрить</button>
+          <button class="btn-reject" data-id="${rev.id}" data-action="reject">❌ Отклонить</button>
+        </div>
+      </div>
+    `).join("");
+    
+    document.querySelectorAll(".btn-approve, .btn-reject").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        const reviewId = btn.getAttribute("data-id");
+        const action = btn.getAttribute("data-action");
+        if (reviewId && action) {
+          moderateReview(reviewId, action);
+        }
+      });
+    });
+  }
+
+  // Публичные одобренные отзывы
+  function renderPublicReviews() {
+    const approvedReviews = reviews.filter(r => r.status === "approved").sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+    const listDiv = document.getElementById("reviewsList");
+    if (approvedReviews.length === 0) {
+      listDiv.innerHTML = `<div style="padding:1rem; text-align:center; color:#64748b;">🌟 Пока нет одобренных отзывов. Напишите свой!</div>`;
+      return;
+    }
+    listDiv.innerHTML = approvedReviews.map(rev => `
+      <div class="review-item">
+        <div class="review-header">
+          <span>👤 ${escapeHtml(rev.username)}</span>
+          <span>${formatDate(rev.createdAt)}</span>
+        </div>
+        <div>${renderStarsReadonly(rev.rating)}</div>
+        <div class="review-text">${escapeHtml(rev.text)}</div>
+      </div>
+    `).join("");
+  }
+
+  function renderStarsReadonly(rating) {
+    let html = `<div style="display:flex; gap:2px;">`;
+    for (let i = 1; i <= 5; i++) {
+      if (i <= rating) html += `<span class="star-readonly" style="color:#fbbf24;">★</span>`;
+      else html += `<span class="star-readonly gray" style="color:#e2e8f0;">★</span>`;
+    }
+    html += `</div>`;
+    return html;
+  }
+
+  function formatDate(isoDate) {
+    if (!isoDate) return "недавно";
+    const date = new Date(isoDate);
+    return date.toLocaleDateString("ru-RU", { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+  }
+  
+  function escapeHtml(str) {
+    if (!str) return "";
+    return str.replace(/[&<>]/g, function(m) {
+      if (m === '&') return '&amp;';
+      if (m === '<') return '&lt;';
+      if (m === '>') return '&gt;';
+      return m;
+    });
+  }
+
+  // Старт
+  initData();
+  loadSession();
+  renderAll();
+  window.addEventListener("storage", (e) => {
+    if (e.key === "review_system_users" || e.key === "review_system_reviews" || e.key === "review_system_currentUser") {
+      initData();
+      loadSession();
+      renderAll();
+    }
+  });
+</script>
+</body>
+</html>
